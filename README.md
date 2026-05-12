@@ -2,38 +2,30 @@
 
 ## Project Overview
 
-This project analyzes auto insurance claims data to identify potentially fraudulent claims using machine learning and business-oriented risk reporting.
+This project builds a machine learning workflow to identify potentially fraudulent auto insurance claims using policy, vehicle, incident, and claim-related information.
 
-The goal of this project is not only to build classification models, but also to translate model outputs into practical insights that can support insurance claim review, fraud-risk detection, and investigation prioritization.
-
-The workflow includes data cleaning, feature engineering, categorical encoding, class imbalance handling, model training, model evaluation, and feature importance analysis.
-
----
+The goal of this project is not only to train classification models, but also to support business-oriented fraud risk analysis. The model results can help prioritize suspicious claims for further manual review and support data-driven decision-making in insurance claim investigation.
 
 ## Dataset
 
 The dataset used in this project is an auto insurance claims fraud detection dataset from Kaggle.
 
-It contains policy, customer, vehicle, and incident-level information related to insurance claims. The target variable is `fraud_reported`, which indicates whether a claim was reported as fraudulent.
+The target variable is:
 
-### Target Variable
+- `fraud_reported`
+  - `Y`: Fraudulent claim
+  - `N`: Non-fraudulent claim
 
-| Variable | Description |
-|---|---|
-| `fraud_reported` | Indicates whether an insurance claim was reported as fraudulent |
+The dataset includes information such as:
 
-Target encoding:
+- Policy details
+- Customer information
+- Incident details
+- Vehicle information
+- Claim amounts
+- Fraud reporting status
 
-| Original Value | Encoded Value | Meaning |
-|---|---:|---|
-| `Y` | 1 | Fraudulent claim |
-| `N` | 0 | Non-fraudulent claim |
-
----
-
-## Tools and Libraries
-
-This project was developed using:
+## Tools and Technologies
 
 - Python
 - pandas
@@ -42,14 +34,13 @@ This project was developed using:
 - XGBoost
 - matplotlib
 - seaborn
-
----
+- Kaggle Notebook environment
 
 ## Project Workflow
 
-## 1. Data Loading
+### 1. Data Loading
 
-The notebook automatically searches the Kaggle input directory for CSV files and loads the first available dataset.
+The notebook automatically searches the Kaggle input directory and loads the first available CSV file.
 
 ```python
 csv_files = glob.glob('/kaggle/input/**/*.csv', recursive=True)
@@ -57,11 +48,9 @@ file_path = csv_files[0]
 df = pd.read_csv(file_path)
 ```
 
-This makes the notebook easier to run in a Kaggle environment without manually entering a dataset path.
+This makes the notebook easier to run in the Kaggle environment without manually typing the dataset path.
 
----
-
-## 2. Data Cleaning
+### 2. Data Cleaning
 
 Missing values represented by `?` are replaced with `NaN`.
 
@@ -69,83 +58,93 @@ Missing values represented by `?` are replaced with `NaN`.
 df.replace('?', np.nan, inplace=True)
 ```
 
-Missing categorical values are filled using the mode for the following columns:
+The following categorical columns are filled using their most frequent values:
 
 - `collision_type`
 - `property_damage`
 - `police_report_available`
 
-These fields are related to claim and incident characteristics, so filling them helps preserve useful business information instead of removing rows.
+This helps preserve useful claim-related information instead of removing rows with missing values.
 
----
+### 3. Feature Engineering
 
-## 3. Feature Engineering
+Two additional business-relevant features are created.
 
-Two business-relevant features are created from the original dataset.
-
-### Policy Age
-
-`policy_age_days` measures the number of days between the policy binding date and the incident date.
+#### Policy Age
 
 ```python
-df['policy_age_days'] = (df['incident_date'] - df['policy_bind_date']).dt.days
+policy_age_days = incident_date - policy_bind_date
 ```
 
-This feature may help capture whether claims occur soon after a policy begins, which can be useful in fraud-risk analysis.
+This feature represents the number of days between the policy binding date and the incident date. It may help capture suspicious claims that occur shortly after policy activation.
 
-### Vehicle Age
-
-`vehicle_age` measures the age of the vehicle at the time of the incident.
+#### Vehicle Age
 
 ```python
-df['vehicle_age'] = df['incident_year'] - df['auto_year']
+vehicle_age = incident_year - auto_year
 ```
 
-This feature may help analyze whether vehicle age contributes to claim patterns or fraud-risk behavior.
+This feature represents the age of the vehicle at the time of the incident.
 
-After these features are created, redundant identifiers and raw date columns are removed.
+After creating these features, redundant identifiers and raw date columns are removed, including:
 
----
+- `policy_number`
+- `policy_bind_date`
+- `incident_date`
+- `incident_location`
+- `auto_year`
+- `incident_year`
+- `_c39`
 
-## 4. Encoding and Train-Test Split
+### 4. Target Encoding
 
-Categorical variables are transformed using one-hot encoding.
+The target variable `fraud_reported` is converted into binary format:
+
+```python
+Y -> 1
+N -> 0
+```
+
+Where:
+
+- `1` represents a fraudulent claim
+- `0` represents a normal claim
+
+### 5. Categorical Encoding
+
+Categorical variables are converted using one-hot encoding.
 
 ```python
 df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 ```
 
-One-hot encoding avoids assigning artificial ordinal meaning to categorical variables.
+One-hot encoding is used instead of label encoding to avoid assigning artificial ordinal relationships to categorical values.
 
-The dataset is then split into training and testing sets using a stratified split.
+### 6. Train-Test Split
+
+The dataset is split into training and testing sets using an 80/20 split.
 
 ```python
 train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 ```
 
-Stratification helps preserve the fraud and non-fraud class distribution in both the training and testing sets.
+A stratified split is used to maintain a similar fraud/non-fraud ratio in both the training and testing sets.
 
----
+### 7. Feature Scaling
 
-## 5. Feature Scaling
-
-Numerical features are standardized using `StandardScaler`.
+Numerical features are standardized using Z-score normalization.
 
 ```python
-scaler = StandardScaler()
-X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
-X_test[num_cols] = scaler.transform(X_test[num_cols])
+StandardScaler()
 ```
 
-The scaler is fitted only on the training set and then applied to the test set to avoid data leakage.
+This ensures that numerical features are on a comparable scale before model training.
 
----
-
-## 6. Model Training
+### 8. Model Training
 
 Two classification models are trained and compared:
 
-### Random Forest Classifier
+#### Random Forest Classifier
 
 ```python
 RandomForestClassifier(
@@ -156,9 +155,9 @@ RandomForestClassifier(
 )
 ```
 
-The Random Forest model uses `class_weight='balanced'` to help address class imbalance.
+The `class_weight='balanced'` parameter is used to help address class imbalance.
 
-### XGBoost Classifier
+#### XGBoost Classifier
 
 ```python
 XGBClassifier(
@@ -170,13 +169,11 @@ XGBClassifier(
 )
 ```
 
-The XGBoost model uses `scale_pos_weight` to account for the imbalance between fraudulent and non-fraudulent claims.
+The `scale_pos_weight` parameter is used to help XGBoost handle the imbalanced fraud classification problem.
 
----
+## Model Evaluation
 
-## 7. Model Evaluation
-
-The models are evaluated using multiple classification metrics:
+The models are evaluated using the following metrics:
 
 - Accuracy
 - Precision
@@ -184,109 +181,65 @@ The models are evaluated using multiple classification metrics:
 - F1-score
 - ROC-AUC
 - PR-AUC
-- Confusion matrix
+- Confusion Matrix
 
-Since insurance fraud detection is usually an imbalanced classification problem, accuracy alone is not enough. Recall, precision, F1-score, ROC-AUC, and PR-AUC provide a more complete view of model performance.
+Since fraud detection is usually an imbalanced classification problem, accuracy alone is not enough. This project also considers recall, F1-score, ROC-AUC, and PR-AUC to better evaluate model performance on fraudulent claims.
 
-### Evaluation Focus
-
-In a fraud-risk setting:
-
-- **Recall** is important because missing fraudulent claims can be costly.
-- **Precision** is important because too many false alarms can increase investigation workload.
-- **PR-AUC** is especially useful for imbalanced datasets.
-- **Confusion matrices** help show how many fraud and non-fraud cases are correctly or incorrectly classified.
-
----
-
-## 8. Feature Importance Analysis
+## Feature Importance
 
 The XGBoost model is used to generate feature importance scores.
+
+The top 15 most important features are visualized to understand which claim characteristics contribute most to the fraud prediction model.
 
 ```python
 importances = xgb.feature_importances_
 ```
 
-The top 15 features are visualized to help explain which variables contribute most to fraud-risk prediction.
+This helps translate model outputs into more interpretable business insights.
 
-This step supports model interpretability and helps translate technical results into business insights.
+## Business Value
 
----
-
-## Key Business Value
-
-This project demonstrates how machine learning can support insurance fraud-risk analytics by:
+This project demonstrates how machine learning can support insurance fraud risk analysis by:
 
 - Identifying potentially suspicious claims
 - Prioritizing claims for manual investigation
+- Supporting fraud review teams with data-driven insights
 - Reducing unnecessary review workload
-- Supporting data-driven claim review decisions
-- Explaining key factors associated with fraud-risk prediction
-- Translating model results into business-oriented insights
+- Explaining important risk drivers through feature importance analysis
 
----
+## How to Run
 
-## Results and Interpretation
+### Option 1: Run on Kaggle
 
-The project compares Random Forest and XGBoost models using multiple performance metrics. The confusion matrix and classification report provide insight into how well each model identifies fraudulent and non-fraudulent claims.
+1. Open Kaggle Notebook.
+2. Add the auto insurance fraud dataset as an input.
+3. Copy the notebook code into Kaggle.
+4. Run all cells in order.
 
-The feature importance chart helps identify the strongest predictors in the model, which can be used to support fraud-risk reporting and claim investigation prioritization.
+The notebook automatically searches for CSV files inside:
 
----
+```python
+/kaggle/input/
+```
 
-## Project Limitations
+### Option 2: Run Locally
 
-This project is based on a public dataset and is intended for learning, portfolio, and analytical demonstration purposes.
+If running locally, update the file path manually:
 
-In a real insurance business environment, additional validation would be required before using the model for operational decision-making.
+```python
+file_path = "your_local_dataset_path.csv"
+df = pd.read_csv(file_path)
+```
 
-Possible limitations include:
+Then install the required libraries:
 
-- The dataset may not fully represent real-world insurance claim behavior.
-- Public datasets may contain simplified or historical patterns.
-- Feature importance does not always imply direct causation.
-- Model thresholds may need to be adjusted based on business costs.
-- Further explainability techniques would be needed for production use.
+```bash
+pip install pandas numpy matplotlib seaborn scikit-learn xgboost
+```
 
----
+Run the Python script or Jupyter Notebook.
 
-## Future Improvements
-
-Possible future improvements include:
-
-- Hyperparameter tuning using cross-validation
-- Threshold optimization based on investigation cost
-- SHAP analysis for stronger model explainability
-- Additional business feature engineering
-- Model monitoring for data drift
-- Power BI or Tableau dashboard for fraud-risk reporting
-- Deployment as a simple web application or API
-
----
-
-## Skills Demonstrated
-
-This project demonstrates the following skills:
-
-- Data cleaning
-- Missing-value handling
-- Feature engineering
-- One-hot encoding
-- Stratified train-test splitting
-- Feature scaling
-- Classification modeling
-- Handling imbalanced data
-- Random Forest modeling
-- XGBoost modeling
-- Model evaluation
-- ROC-AUC and PR-AUC interpretation
-- Confusion matrix analysis
-- Feature importance visualization
-- Business-oriented analytics reporting
-
----
-
-## Repository Structure
+## Project Structure
 
 ```text
 insurance-claims-fraud-risk-analytics/
@@ -300,38 +253,47 @@ insurance-claims-fraud-risk-analytics/
     └── xgboost_feature_importance.png
 ```
 
----
+## Requirements
 
-## How to Run
-
-1. Clone the repository.
-
-```bash
-git clone https://github.com/your-username/insurance-claims-fraud-risk-analytics.git
+```txt
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+xgboost
 ```
 
-2. Install the required libraries.
+## Limitations and Future Improvements
 
-```bash
-pip install -r requirements.txt
-```
+This project is designed as a machine learning analytics project using a public dataset. In a real insurance business environment, additional validation, governance, and monitoring would be required before using the model in production.
 
-3. Open the notebook.
+Possible future improvements include:
 
-```bash
-jupyter notebook insurance_fraud_analysis.ipynb
-```
+- Hyperparameter tuning using cross-validation
+- Threshold adjustment based on fraud investigation cost
+- SHAP analysis for stronger model explainability
+- More advanced feature engineering
+- Model monitoring for data drift
+- Power BI or Tableau dashboard for business reporting
+- Comparison with logistic regression as a more interpretable baseline model
 
-4. Run all cells in order.
+## Skills Demonstrated
 
----
+- Data cleaning
+- Missing value handling
+- Feature engineering
+- One-hot encoding
+- Train-test splitting
+- Feature scaling
+- Imbalanced classification handling
+- Random Forest modeling
+- XGBoost modeling
+- Model evaluation
+- Confusion matrix visualization
+- Feature importance analysis
+- Business-oriented fraud risk interpretation
 
-## Example Project Summary
+## Summary
 
-This project builds an end-to-end machine learning workflow for auto insurance claims fraud-risk analysis. It prepares mixed-type insurance claim data, engineers business-relevant features, handles class imbalance, trains Random Forest and XGBoost classifiers, evaluates performance using fraud-focused metrics, and visualizes feature importance to support claim investigation prioritization.
-
----
-
-## Author
-
-Jason Chan
+This project presents an end-to-end machine learning workflow for auto insurance claims fraud detection. It combines data preprocessing, feature engineering, classification modeling, performance evaluation, and feature importance analysis to support fraud risk review and insurance claim investigation prioritization.
