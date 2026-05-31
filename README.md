@@ -8,7 +8,11 @@ The goal of this project is not only to train classification models, but also to
 
 ## Dataset
 
-The dataset used in this project is an auto insurance claims fraud detection dataset from Kaggle.
+The dataset used in this project is an auto insurance claims fraud detection dataset from Kaggle:
+
+**Dataset Source:** [Auto Insurance Claims Fraud Detection](https://www.kaggle.com/datasets/antopravinjohnbosco/auto-insurance-claims-fraud-detection)
+
+
 
 The target variable is:
 
